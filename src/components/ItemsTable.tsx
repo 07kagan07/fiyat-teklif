@@ -82,7 +82,14 @@ export default function ItemsTable({ items, currency, showVat, priceIncludesVat,
               <th className="text-right px-3 py-2 font-medium" style={{ width: 130 }}>
                 Birim Fiyat {showVat && <span className="text-xs font-normal opacity-70">({priceIncludesVat ? 'KDV Dahil' : 'KDV Hariç'})</span>}
               </th>
-              {showVat && <th className="text-center px-3 py-2 font-medium" style={{ width: 90 }}>KDV %</th>}
+              {showVat && (
+                <th
+                  className="text-center px-3 py-2 font-medium"
+                  style={{ width: 90, minWidth: 90, whiteSpace: 'nowrap' }}
+                >
+                  KDV %
+                </th>
+              )}
               {showVat && <th className="text-right px-3 py-2 font-medium" style={{ width: 110 }}>Ara Toplam</th>}
               {showVat && <th className="text-right px-3 py-2 font-medium" style={{ width: 100 }}>KDV</th>}
               <th className="text-right px-3 py-2 font-medium" style={{ width: 120 }}>Toplam</th>
@@ -168,7 +175,7 @@ export default function ItemsTable({ items, currency, showVat, priceIncludesVat,
                     />
                   </td>
                   {showVat && (
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 whitespace-nowrap" style={{ minWidth: 90 }}>
                       <select
                         value={item.vatRate}
                         onChange={(e) => updateItem(item.id, 'vatRate', parseInt(e.target.value))}
