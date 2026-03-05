@@ -12,7 +12,7 @@ interface Props {
 }
 
 const UNITS = ['Adet', 'Kg', 'Metre', 'M²', 'M³', 'Litre', 'Saat', 'Gün', 'Ay', 'Paket', 'Set'];
-const VAT_RATES = [0, 1, 10, 20];
+const VAT_RATES = [0, 1, 10, 15, 18, 20];
 
 function newItem(): QuoteItem {
   return {
@@ -28,6 +28,8 @@ function newItem(): QuoteItem {
 export default function ItemsTable({ items, currency, showVat, priceIncludesVat, onChange }: Props) {
   const dragIndex = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [qtyDraft, setQtyDraft] = useState<Record<string, string>>({});
+  const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
 
   const addItem = () => onChange([...items, newItem()]);
   const removeItem = (id: string) => onChange(items.filter((i) => i.id !== id));
@@ -126,9 +128,16 @@ export default function ItemsTable({ items, currency, showVat, priceIncludesVat,
                     <input
                       type="number"
                       min="0"
-                      step="0.01"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                      step="1"
+                      value={qtyDraft[item.id] ?? (item.quantity || item.quantity === 0 ? String(item.quantity) : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setQtyDraft((prev) => ({ ...prev, [item.id]: val }));
+                        const n = parseInt(val, 10);
+                        if (!Number.isNaN(n)) {
+                          updateItem(item.id, 'quantity', n);
+                        }
+                      }}
                       className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </td>
@@ -146,8 +155,15 @@ export default function ItemsTable({ items, currency, showVat, priceIncludesVat,
                       type="number"
                       min="0"
                       step="0.01"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      value={priceDraft[item.id] ?? (item.unitPrice || item.unitPrice === 0 ? String(item.unitPrice) : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPriceDraft((prev) => ({ ...prev, [item.id]: val }));
+                        const n = parseFloat(val);
+                        if (!Number.isNaN(n)) {
+                          updateItem(item.id, 'unitPrice', n);
+                        }
+                      }}
                       className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </td>
