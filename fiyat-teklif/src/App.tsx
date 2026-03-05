@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { FileDown, Eye, EyeOff, RefreshCw, Save } from 'lucide-react';
+import { FileDown, Eye, EyeOff, RefreshCw, Save, History as HistoryIcon } from 'lucide-react';
 import type { Quote } from './types';
-import { generateQuoteNumber } from './utils/calculations';
+import { calcQuoteTotals, generateQuoteNumber } from './utils/calculations';
 import { exportToPDF } from './utils/pdfExport';
 import { loadSavedQuote, useAutoSave } from './hooks/useAutoSave';
+import { addQuoteToHistory, clearHistory, deleteFromHistory, getQuoteHistory, type QuoteHistoryItem } from './utils/history';
 import CompanyForm from './components/CompanyForm';
 import CustomerForm from './components/CustomerForm';
 import QuoteDetails from './components/QuoteDetails';
 import ItemsTable from './components/ItemsTable';
 import QuotePreview from './components/QuotePreview';
+import QuoteHistory from './components/QuoteHistory';
 
 const today = new Date().toISOString().split('T')[0];
 const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -27,14 +29,11 @@ const defaultQuote: Quote = {
   priceIncludesVat: false,
 };
 
-function getInitialQuote(): Quote {
-  const saved = loadSavedQuote<Quote>();
-  return saved ?? defaultQuote;
-}
-
 export default function App() {
-  const [quote, setQuote] = useState<Quote>(getInitialQuote);
+  const [quote, setQuote] = useState<Quote>(() => loadSavedQuote<Quote>() ?? defaultQuote);
+  const [history, setHistory] = useState<QuoteHistoryItem[]>(() => getQuoteHistory());
   const [showPreview, setShowPreview] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const { savedAt } = useAutoSave(quote);
 
@@ -56,6 +55,36 @@ export default function App() {
       localStorage.removeItem('fiyat-teklif-data');
       setShowPreview(false);
     }
+  };
+
+  const handleSaveToHistory = () => {
+    if (!quote.items.length) {
+      alert('Geçmişe kaydetmek için en az bir satır ekleyin.');
+      return;
+    }
+    const totals = calcQuoteTotals(quote.items, quote.priceIncludesVat);
+    const total = quote.showVat ? totals.grandTotal : totals.subtotal;
+    const list = addQuoteToHistory(quote, total);
+    setHistory(list);
+  };
+
+  const handleSelectHistory = (id: string) => {
+    const item = history.find((h) => h.id === id);
+    if (!item) return;
+    setQuote(item.data);
+    setShowPreview(false);
+  };
+
+  const handleDeleteHistory = (id: string) => {
+    const list = deleteFromHistory(id);
+    setHistory(list);
+  };
+
+  const handleClearHistory = () => {
+    if (!history.length) return;
+    if (!confirm('Tüm geçmiş teklif kayıtları silinsin mi?')) return;
+    const list = clearHistory();
+    setHistory(list);
   };
 
   return (
@@ -91,6 +120,19 @@ export default function App() {
               Sıfırla
             </button>
             <button
+              onClick={() => setShowHistoryModal(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+            >
+              <HistoryIcon size={16} />
+              Geçmiş
+            </button>
+            <button
+              onClick={handleSaveToHistory}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Teklifi Kaydet
+            </button>
+            <button
               onClick={handleExport}
               disabled={exporting}
               className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -124,6 +166,31 @@ export default function App() {
           <div className="max-w-4xl mx-auto">
             <div className="shadow-xl rounded-lg overflow-hidden border border-gray-200">
               <QuotePreview quote={quote} />
+            </div>
+          </div>
+        )}
+
+        {showHistoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2">
+            <div className="absolute inset-0" onClick={() => setShowHistoryModal(false)} />
+            <div className="relative z-10">
+              <QuoteHistory
+                items={history}
+                onSelect={(id) => {
+                  handleSelectHistory(id);
+                  setShowHistoryModal(false);
+                }}
+                onDelete={handleDeleteHistory}
+                onClear={handleClearHistory}
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors bg-white border border-gray-200"
+                >
+                  Kapat
+                </button>
+              </div>
             </div>
           </div>
         )}
